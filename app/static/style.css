@@ -27,9 +27,7 @@ body {
     justify-content: center;
 }
 
-h1,
-h2,
-h3 {
+h1, h2, h3 {
     text-align: center;
     color: var(--accent-gold);
     text-shadow: 0 0 10px rgba(212, 175, 55, 0.5);
@@ -63,8 +61,7 @@ label {
     color: var(--accent-gold);
 }
 
-input[type="text"],
-input[type="number"] {
+input[type="text"], input[type="number"] {
     width: 100%;
     padding: 10px;
     border: 1px solid var(--accent-gold);
@@ -108,8 +105,7 @@ input[type="number"] {
 .question-box {
     background: linear-gradient(to bottom, #0d2880, #06114f);
     border: 3px solid var(--accent-gold);
-    border-radius: 50px;
-    /* Pill shape */
+    border-radius: 50px; /* Pill shape */
     padding: 30px;
     text-align: center;
     margin-bottom: 30px;

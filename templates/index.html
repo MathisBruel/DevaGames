@@ -1,25 +1,57 @@
 {% extends "base.html" %}
 
-{% block title %}Accueil - DevaGames{% endblock %}
+{% block title %}Accueil{% endblock %}
 
 {% block content %}
-<div class="hero">
-    <h1>Bienvenue sur DevaGames</h1>
-    <p>Votre plateforme de jeux en développement</p>
+<div class="logo-area animate__animated animate__fadeInDown">
+    <div>QUI VEUT GAGNER</div>
+    <div style="font-size: 1.5em; color: var(--accent-gold);">DES DEVACOINS ?</div>
 </div>
 
-<div class="features">
-    <div class="feature-card">
-        <h2>Fonctionnalité 1</h2>
-        <p>Description de la fonctionnalité</p>
-    </div>
-    <div class="feature-card">
-        <h2>Fonctionnalité 2</h2>
-        <p>Description de la fonctionnalité</p>
-    </div>
-    <div class="feature-card">
-        <h2>Fonctionnalité 3</h2>
-        <p>Description de la fonctionnalité</p>
-    </div>
+<div class="setup-form animate__animated animate__fadeInUp">
+    <form action="{{ url_for('main.index') }}" method="post" id="setupForm">
+        <h3>Configuration de la Partie</h3>
+
+        <div class="form-group">
+            <label>Joueurs</label>
+            <div id="players-container">
+                <div class="player-input-group">
+                    <input type="text" name="player_name" placeholder="Nom du Joueur 1" required>
+                </div>
+                <div class="player-input-group">
+                    <input type="text" name="player_name" placeholder="Nom du Joueur 2" required>
+                </div>
+            </div>
+            <button type="button" id="add-player"
+                style="background: transparent; border: 1px solid var(--accent-gold); color: var(--accent-gold); padding: 5px 10px; margin-top: 5px; cursor: pointer; border-radius: 5px;">+
+                Ajouter un joueur</button>
+        </div>
+
+        <div class="form-group">
+            <label>Rounds (Aléatoire entre Min et Max)</label>
+            <div style="display: flex; gap: 10px;">
+                <input type="number" name="min_rounds" value="5" min="1" placeholder="Min">
+                <input type="number" name="max_rounds" value="10" min="1" placeholder="Max">
+            </div>
+        </div>
+
+        <button type="submit" class="btn">Commencer la Partie</button>
+    </form>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.getElementById('add-player').addEventListener('click', function () {
+        const container = document.getElementById('players-container');
+        const count = container.children.length + 1;
+        const div = document.createElement('div');
+        div.className = 'player-input-group animate__animated animate__fadeIn';
+        div.innerHTML = `
+            <input type="text" name="player_name" placeholder="Nom du Joueur ${count}" required>
+            <button type="button" class="remove-player btn" onclick="this.parentElement.remove()">X</button>
+        `;
+        container.appendChild(div);
+    });
+</script>
 {% endblock %}

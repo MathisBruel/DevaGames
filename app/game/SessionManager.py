@@ -10,11 +10,17 @@ class SessionManager:
     def __init__(self):
         self.sessions: Dict[str, Session] = {}
 
-    def create_session(self, player_names: List[str], quiz: Optional[QuizEngine] = None) -> str:
+    def create_session(self, player_names: List[str] = None, quiz: Optional[QuizEngine] = None) -> str:
         if quiz is None:
             quiz = QuizEngine()
-        players = [Player(name=name) for name in player_names]
-        game = Game(players=players, quiz=quiz)
+        
+        # Game init no longer takes players
+        game = Game(quiz=quiz)
+        
+        if player_names:
+            for name in player_names:
+                game.add_player(name)
+                
         session_id = str(uuid.uuid4())
         session = Session(id_session=session_id, game=game)
         self.sessions[session_id] = session

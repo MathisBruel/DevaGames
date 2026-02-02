@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block title %}Connexion Admin{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <div class="form-card animate__animated animate__fadeInDown">
+        <h2 class="form-title">CONNEXION ADMIN</h2>
+
+        <form method="POST">
+            <div class="form-group">
+                <label class="form-label">Mot de passe</label>
+                <input type="password" name="password" placeholder="••••••" required autofocus>
+            </div>
+
+            <button type="submit" class="btn" style="width: 100%; padding: 12px; font-size: 1rem;">
+                SE CONNECTER
+            </button>
+        </form>
+
+        {% if error %}
+        <div style="margin-top: 20px; color: var(--danger-color); font-size: 0.9rem;">
+            {{ error }}
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard{% endblock %}
+
+{% block content %}
+<div class="setup-form animate__animated animate__fadeInUp" style="max-width: 600px; margin: 0 auto; padding: 20px;">
+    <h2 style="text-align: center; margin-bottom: 30px;">Configuration de la Partie</h2>
+    <form action="/admin/dashboard" method="POST">
+
+        <!-- Rounds -->
+        <div class="form-group">
+            <label class="form-label">Nombre de Rounds (Min - Max)</label>
+            <div style="display: flex; gap: 10px;">
+                <input type="number" id="min_rounds" name="min_rounds" value="5" min="1">
+                <input type="number" id="max_rounds" name="max_rounds" value="10" min="1">
+            </div>
+        </div>
+
+        <!-- Players -->
+        <div class="form-group">
+            <label class="form-label">Nombre de Joueurs (Min - Max)</label>
+            <div style="display: flex; gap: 10px;">
+                <input type="number" id="min_players" name="min_players" value="2" min="1">
+                <input type="number" id="max_players" name="max_players" value="20" min="1">
+            </div>
+        </div>
+
+        <!-- Time -->
+        <div class="form-group">
+            <label class="form-label">Temps par Question (secondes)</label>
+            <input type="number" id="time_limit" name="time_limit" value="30" min="5">
+        </div>
+
+        <!-- Difficulty Ratios -->
+        <div class="form-group">
+            <label class="form-label">Difficulté (%) - Doit totaliser 100%</label>
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <div style="flex: 1; text-align: center;">
+                    <label style="font-size: 0.8em; color: var(--success-color);">Facile</label>
+                    <input type="number" id="ratio_easy" name="ratio_easy" value="10" min="0" max="100">
+                </div>
+                <div style="flex: 1; text-align: center;">
+                    <label style="font-size: 0.8em; color: var(--accent-color);">Normal</label>
+                    <input type="number" id="ratio_normal" name="ratio_normal" value="80" min="0" max="100">
+                </div>
+                <div style="flex: 1; text-align: center;">
+                    <label style="font-size: 0.8em; color: var(--danger-color);">Difficile</label>
+                    <input type="number" id="ratio_hard" name="ratio_hard" value="10" min="0" max="100">
+                </div>
+            </div>
+        </div>
+
+        <!-- Categories -->
+        <div class="form-group">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <label class="form-label" style="margin: 0;">Catégories</label>
+                <button type="button" onclick="toggleAllCategories()" class="btn btn-outline"
+                    style="padding: 5px 12px; font-size: 0.8rem;" id="toggle-all-btn">
+                    Tout désélectionner
+                </button>
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;" id="categories-grid">
+                <label class="category-checkbox">
+                    <input type="checkbox" name="categories" value="art_litterature" checked> 📚 Art & Littérature
+                </label>
+                <label class="category-checkbox">
+                    <input type="checkbox" name="categories" value="cinema" checked> 🎬 Cinéma
+                </label>
+                <label class="category-checkbox">
+                    <input type="checkbox" name="categories" value="culture_generale" checked> 🧠 Culture Générale
+                </label>
+                <label class="category-checkbox">
+                    <input type="checkbox" name="categories" value="gastronomie" checked> 🍽️ Gastronomie
+                </label>
+                <label class="category-checkbox">
+                    <input type="checkbox" name="categories" value="geographie" checked> 🌍 Géographie
+                </label>
+                <label class="category-checkbox">
+                    <input type="checkbox" name="categories" value="histoire" checked> 📜 Histoire
+                </label>
+                <label class="category-checkbox">
+                    <input type="checkbox" name="categories" value="musique" checked> 🎵 Musique
+                </label>
+                <label class="category-checkbox">
+                    <input type="checkbox" name="categories" value="nature" checked> 🌿 Nature
+                </label>
+                <label class="category-checkbox">
+                    <input type="checkbox" name="categories" value="sciences" checked> 🔬 Sciences
+                </label>
+                <label class="category-checkbox">
+                    <input type="checkbox" name="categories" value="sport" checked> ⚽ Sport
+                </label>
+                <label class="category-checkbox">
+                    <input type="checkbox" name="categories" value="television" checked> 📺 Télévision
+                </label>
+                <label class="category-checkbox">
+                    <input type="checkbox" name="categories" value="jeux_videos" checked> 🎮 Jeux Vidéo
+                </label>
+            </div>
+        </div>
+
+        <!-- Auto Advance -->
+        <div class="form-group"
+            style="display: flex; align-items: center; gap: 15px; background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px;">
+            <input type="checkbox" id="auto_advance" name="auto_advance" style="width: 24px; height: 24px;">
+            <label for="auto_advance" style="margin: 0; cursor: pointer; font-size: 1rem;">⚡ Passage automatique (3s
+                après chaque réponse)</label>
+        </div>
+
+        <div style="text-align: center; margin: 30px 0 20px 0;">
+            <p style="color: var(--text-secondary);">Une fois la partie créée, vous serez redirigé vers l'écran
+                projecteur.</p>
+        </div>
+
+        <button type="submit" class="btn" style="width: 100%; padding: 15px; font-size: 1.2rem;">
+            🚀 Ouvrir le Lobby
+        </button>
+    </form>
+</div>
+
+<style>
+    .category-checkbox {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 6px;
+        cursor: pointer;
+        transition: background 0.2s;
+        font-size: 0.85rem;
+    }
+
+    .category-checkbox:hover {
+        background: rgba(255, 255, 255, 0.1);
+    }
+
+    .category-checkbox input {
+        width: 18px;
+        height: 18px;
+    }
+</style>
+
+<script>
+    function toggleAllCategories() {
+        const checkboxes = document.querySelectorAll('#categories-grid input[type="checkbox"]');
+        const btn = document.getElementById('toggle-all-btn');
+        const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+
+        checkboxes.forEach(cb => {
+            cb.checked = !allChecked;
+        });
+
+        btn.innerText = allChecked ? 'Tout sélectionner' : 'Tout désélectionner';
+    }
+
+    // Update button text based on current state
+    document.addEventListener('DOMContentLoaded', () => {
+        const checkboxes = document.querySelectorAll('#categories-grid input[type="checkbox"]');
+        checkboxes.forEach(cb => {
+            cb.addEventListener('change', () => {
+                const btn = document.getElementById('toggle-all-btn');
+                const allChecked = Array.from(document.querySelectorAll('#categories-grid input[type="checkbox"]')).every(c => c.checked);
+                btn.innerText = allChecked ? 'Tout désélectionner' : 'Tout sélectionner';
+            });
+        });
+    });
+</script>
+{% endblock %}

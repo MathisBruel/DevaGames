@@ -1,0 +1,346 @@
+{% extends "base.html" %}
+
+{% block title %}Jeu en cours{% endblock %}
+
+{% block content %}
+<div class="container" style="padding: 20px; max-height: 100vh;">
+    <!-- Header -->
+    <header class="game-header">
+        <div class="game-stat">
+            <span class="stat-label">Round</span>
+            <span class="stat-value"><span id="current-round">1</span>/<span id="max-rounds">10</span></span>
+        </div>
+
+        <div class="game-stat" style="flex: 1; align-items: center;">
+            <div style="font-size: 2rem; font-weight: 900; text-transform: uppercase; color: var(--accent-color);">
+                <span id="current-player">JOUEUR</span>
+            </div>
+            <div class="stat-label">C'est votre tour</div>
+        </div>
+
+        <div class="game-stat">
+            <span class="stat-label">Temps</span>
+            <span class="stat-value highlight" id="timer">--</span>
+        </div>
+
+        <div style="margin-left: 30px;">
+            <button onclick="stopGame()" class="btn btn-danger btn-sm" style="padding: 5px 10px; font-size: 0.8rem;">
+                STOP
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Grid -->
+    <div class="game-grid card" style="padding: 0; border: none; background: transparent; box-shadow: none;">
+
+        <!-- Left Sidebar: Leaderboard -->
+        <aside class="leaderboard-panel card" style="height: 100%;">
+            <div class="leaderboard-title">CLASSEMENT EN DIRECT</div>
+            <ul id="leaderboard" class="leaderboard-list">
+                <!-- JS populated -->
+            </ul>
+        </aside>
+
+        <!-- Center: Question Area -->
+        <main class="question-area">
+            <div class="question-card animate__animated animate__fadeIn">
+                <div id="question-text" class="question-text">
+                    La question apparaîtra ici...
+                </div>
+            </div>
+
+            <div id="options-grid" class="options-grid">
+                <!-- JS populated -->
+            </div>
+
+            <!-- Controls Overlay (Bottom Center) -->
+            <div id="control-bar" style="display: none; margin-top: 30px; text-align: center;">
+                <div
+                    style="display: inline-flex; align-items: center; gap: 15px; background: #222; padding: 10px 20px; border-radius: 50px; border: 1px solid #444;">
+                    <button class="btn btn-outline" onclick="togglePause()" id="pause-btn">PAUSE</button>
+                    <span style="color: #aaa;">Auto: <strong id="auto-timer" style="color: white;">3</strong>s</span>
+                    <button class="btn" onclick="nextTurn()">SUIVANT >></button>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+<script>
+    const sessionId = "{{ session_id }}";
+    let lastQuestion = "";
+    let currentTimeLimit = 30;
+    let timerInterval = null;
+    let timeLeft = 0;
+    let isInFeedback = false;
+    let isRevealing = false;
+    let currentPlayerName = "";
+
+    // Auto Advance Logic
+    let autoTimerInterval = null;
+    let autoTimeLeft = 3;
+    let isPaused = false;
+
+    function startTimer(seconds) {
+        clearInterval(timerInterval);
+        timeLeft = seconds;
+        currentTimeLimit = seconds;
+        document.getElementById('timer').innerText = timeLeft;
+
+        timerInterval = setInterval(() => {
+            timeLeft--;
+            document.getElementById('timer').innerText = timeLeft;
+
+            if (timeLeft <= 0) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+                // TIMEOUT: Auto-submit null answer
+                handleTimeout();
+            }
+        }, 1000);
+    }
+
+    function handleTimeout() {
+        // When time runs out, submit a "TIMEOUT" answer for the current player
+        console.log("TIMEOUT! Submitting null answer for", currentPlayerName);
+        fetch(`/api/game/${sessionId}/timeout`, { method: 'POST' })
+            .then(r => r.json())
+            .then(data => {
+                console.log("Timeout response:", data);
+            })
+            .catch(err => console.error("Timeout error:", err));
+    }
+
+    function stopGame() {
+        if (confirm("Confirmer l'arrêt du jeu ?")) {
+            fetch(`/api/game/${sessionId}/stop`, { method: 'POST' });
+        }
+    }
+
+    function startAutoAdvance() {
+        // Clear any existing timer first
+        if (autoTimerInterval) {
+            clearInterval(autoTimerInterval);
+            autoTimerInterval = null;
+        }
+
+        if (isPaused) return;
+
+        document.getElementById('control-bar').style.display = 'block';
+
+        autoTimeLeft = 3;
+        document.getElementById('auto-timer').innerText = autoTimeLeft;
+
+        autoTimerInterval = setInterval(() => {
+            if (isPaused) return;
+
+            autoTimeLeft--;
+            document.getElementById('auto-timer').innerText = autoTimeLeft;
+
+            if (autoTimeLeft <= 0) {
+                clearInterval(autoTimerInterval);
+                autoTimerInterval = null;
+                nextTurn();
+            }
+        }, 1000);
+    }
+
+    function togglePause() {
+        isPaused = !isPaused;
+        const btn = document.getElementById('pause-btn');
+        btn.innerText = isPaused ? "REPRENDRE" : "PAUSE";
+        btn.style.background = isPaused ? "var(--highlight-color)" : "transparent";
+    }
+
+    function updateOptions(question, showAnswer = false, correctAnswer = null) {
+        const grid = document.getElementById('options-grid');
+        grid.innerHTML = "";
+
+        ['A', 'B', 'C', 'D'].forEach((letter, index) => {
+            const optionText = question.options[index];
+            const card = document.createElement('div');
+            card.className = 'option-card animate__animated animate__fadeInUp';
+            card.style.animationDelay = `${index * 0.05}s`;
+
+            if (showAnswer) {
+                if (optionText === correctAnswer) {
+                    card.classList.add('correct');
+                } else {
+                    card.classList.add('dimmed');
+                }
+            }
+
+            card.innerHTML = `<div class="option-label">${letter}</div> <span>${optionText}</span>`;
+            grid.appendChild(card);
+        });
+    }
+
+    function revealPodium(leaderboard) {
+        if (isRevealing) return;
+        isRevealing = true;
+
+        const winners = leaderboard.slice(0, 3);
+
+        document.body.innerHTML = `
+            <div class="podium-container">
+                <canvas id="confetti-canvas" class="confetti-canvas"></canvas>
+                <h1 style="font-size: 4rem; margin-bottom: 50px; text-shadow: 0 0 20px var(--highlight-color);">PODIUM FINAL</h1>
+                
+                <div style="display: flex; gap: 50px; align-items: flex-end;">
+                    <!-- 2nd Place -->
+                    ${winners[1] ? `
+                    <div class="winner-card" id="rank-2">
+                        <img src="${winners[1].avatar_url}" class="winner-avatar" style="border-color: #C0C0C0;">
+                        <div class="rank-2">#2</div>
+                        <h2>${winners[1].name}</h2>
+                        <h3>${winners[1].score} pts</h3>
+                    </div> ` : ''}
+                    
+                    <!-- 1st Place -->
+                    <div class="winner-card" id="rank-1" style="transform: translateY(0); order: 2;">
+                        <img src="${winners[0].avatar_url}" class="winner-avatar" style="width: 150px; height: 150px; border-color: #FFD700; box-shadow: 0 0 50px #FFD700;">
+                        <div class="rank-1">WINNER</div>
+                        <h1 style="font-size: 3rem;">${winners[0].name}</h1>
+                        <h2 style="color: #FFD700;">${winners[0].score} pts</h2>
+                    </div>
+                    
+                    <!-- 3rd Place -->
+                    ${winners[2] ? `
+                    <div class="winner-card" id="rank-3" style="order: 3;">
+                        <img src="${winners[2].avatar_url}" class="winner-avatar" style="border-color: #CD7F32;">
+                        <div class="rank-3">#3</div>
+                        <h2>${winners[2].name}</h2>
+                        <h3>${winners[2].score} pts</h3>
+                    </div>` : ''}
+                </div>
+                
+                <div style="margin-top: 50px;">
+                     <a href="/admin/dashboard" class="btn">RETOUR MENU</a>
+                </div>
+            </div>
+        `;
+
+        // Reveal sequence
+        setTimeout(() => document.getElementById('rank-3')?.classList.add('reveal'), 500);
+        setTimeout(() => document.getElementById('rank-2')?.classList.add('reveal'), 1500);
+        setTimeout(() => {
+            document.getElementById('rank-1').classList.add('reveal');
+            launchConfetti();
+        }, 3000);
+    }
+
+    function launchConfetti() {
+        var myCanvas = document.getElementById('confetti-canvas');
+        var myConfetti = confetti.create(myCanvas, { resize: true, useWorker: true });
+
+        var duration = 5 * 1000;
+        var end = Date.now() + duration;
+
+        (function frame() {
+            myConfetti({ particleCount: 5, angle: 60, spread: 55, origin: { x: 0 } });
+            myConfetti({ particleCount: 5, angle: 120, spread: 55, origin: { x: 1 } });
+            if (Date.now() < end) requestAnimationFrame(frame);
+        }());
+    }
+
+    function pollState() {
+        if (isRevealing) return;
+
+        fetch(`/api/game/${sessionId}/state`)
+            .then(r => r.json())
+            .then(data => {
+                if (data.is_finished) {
+                    revealPodium(data.leaderboard);
+                    return;
+                }
+
+                document.getElementById('current-round').innerText = data.current_round;
+                document.getElementById('max-rounds').innerText = data.max_rounds;
+                document.getElementById('current-player').innerText = data.current_player;
+                currentPlayerName = data.current_player;
+
+                // Leaderboard Update
+                const lb = document.getElementById('leaderboard');
+                const isBlind = data.is_blind_mode;
+
+                if (isBlind) {
+                    document.querySelector('.leaderboard-title').innerText = "⚠️ SYSTEM FAILURE ⚠️";
+                    document.querySelector('.leaderboard-title').style.color = "red";
+                } else {
+                    document.querySelector('.leaderboard-title').innerText = "CLASSEMENT EN DIRECT";
+                    document.querySelector('.leaderboard-title').style.color = "var(--text-secondary)";
+                }
+
+                lb.innerHTML = data.leaderboard.map(p => `
+                    <li class="leaderboard-item ${p.name === data.current_player ? 'active' : ''} ${isBlind ? 'glitch' : ''}">
+                        <img src="${p.avatar_url}" class="avatar">
+                        <span class="player-name">${p.name}</span>
+                        <span class="player-score ${isBlind ? 'corrupted-text' : ''}">${p.score}</span>
+                    </li>
+                `).join('');
+
+                // Question Logic
+                if (data.status === "PLAYING") {
+                    // Hide control bar when playing
+                    document.getElementById('control-bar').style.display = 'none';
+
+                    // Clear auto-advance timer if it was running
+                    if (autoTimerInterval) {
+                        clearInterval(autoTimerInterval);
+                        autoTimerInterval = null;
+                    }
+
+                    if (data.current_question && data.current_question.question !== lastQuestion) {
+                        lastQuestion = data.current_question.question;
+                        document.getElementById('question-text').innerText = data.current_question.question;
+                        updateOptions(data.current_question);
+                        startTimer(data.time_limit);
+                    }
+                    isInFeedback = false;
+
+                } else if (data.status === "FEEDBACK") {
+                    // Clear question timer
+                    if (timerInterval) {
+                        clearInterval(timerInterval);
+                        timerInterval = null;
+                    }
+
+                    if (!isInFeedback) {
+                        isInFeedback = true;
+                        updateOptions(data.current_question, true, data.current_question.answer);
+
+                        // Show control bar
+                        document.getElementById('control-bar').style.display = 'block';
+
+                        // Start auto-advance if enabled
+                        if (data.auto_advance) {
+                            startAutoAdvance();
+                        }
+                    }
+                }
+            })
+            .catch(err => console.error("Poll error:", err));
+    }
+
+    function nextTurn() {
+        // Clear auto timer
+        if (autoTimerInterval) {
+            clearInterval(autoTimerInterval);
+            autoTimerInterval = null;
+        }
+
+        fetch(`/api/game/${sessionId}/continue`, { method: 'POST' })
+            .then(r => r.json())
+            .then(() => {
+                document.getElementById('control-bar').style.display = 'none';
+            });
+    }
+
+    // Poll every second
+    setInterval(pollState, 1000);
+    pollState();
+</script>
+{% endblock %}

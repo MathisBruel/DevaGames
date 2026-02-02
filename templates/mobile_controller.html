@@ -1,0 +1,201 @@
+{% extends "base.html" %}
+
+{% block title %}Manette{% endblock %}
+
+{% block content %}
+<div class="container" style="justify-content: center; max-width: 600px; margin: 0 auto; height: 100%;">
+
+    <!-- Lobby Mode -->
+    <div id="lobby-view" class="animate__animated animate__fadeIn">
+        <div class="card" style="margin-bottom: 20px; text-align: center; padding: 30px;">
+            <h2 style="color: var(--accent-color); font-size: 2rem;">{{ player_name }}</h2>
+            <div style="margin: 20px 0;">
+                <img id="player-avatar" src="" alt="Avatar"
+                    style="width: 120px; height: 120px; border-radius: 50%; border: 4px solid var(--accent-color); object-fit: cover; background: #333;">
+            </div>
+            <button onclick="rerollAvatar()" class="btn"
+                style="font-size: 1rem; padding: 12px 24px; background: var(--highlight-color);">
+                🎲 Changer Avatar
+            </button>
+        </div>
+
+        <div id="status-area"
+            style="text-align: center; margin-bottom: 20px; font-weight: bold; color: var(--text-secondary); font-size: 1.2rem;">
+            En attente du maître du jeu...
+        </div>
+    </div>
+
+    <!-- Game Mode -->
+    <div id="game-view" style="display: none; width: 100%;">
+        <div class="card" style="text-align: center; margin-bottom: 20px; padding: 20px;">
+            <div style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 5px;">JOUEUR ACTUEL</div>
+            <div id="current-turn-player" style="font-size: 1.8rem; font-weight: bold; color: var(--highlight-color);">
+                --</div>
+        </div>
+
+        <div id="my-turn-area" style="display: none;">
+            <div class="card"
+                style="background: linear-gradient(135deg, rgba(59, 130, 246, 0.3), rgba(245, 158, 11, 0.2)); border: 2px solid var(--highlight-color); text-align: center; margin-bottom: 20px; padding: 25px;">
+                <h2 class="animate__animated animate__pulse animate__infinite" style="font-size: 2rem; color: white;">
+                    C'EST À VOUS !</h2>
+                <div style="font-size: 1.2rem; color: var(--text-secondary);">Regardez l'écran et répondez !</div>
+            </div>
+
+            <!-- BIG COLORFUL ANSWER BUTTONS -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                <button class="answer-btn" onclick="submitAnswer('A')"
+                    style="background: linear-gradient(135deg, #ef4444, #dc2626); height: 100px; font-size: 2.5rem; font-weight: 900; border: none; border-radius: 12px; color: white; cursor: pointer; transition: transform 0.1s;">A</button>
+                <button class="answer-btn" onclick="submitAnswer('B')"
+                    style="background: linear-gradient(135deg, #3b82f6, #2563eb); height: 100px; font-size: 2.5rem; font-weight: 900; border: none; border-radius: 12px; color: white; cursor: pointer; transition: transform 0.1s;">B</button>
+                <button class="answer-btn" onclick="submitAnswer('C')"
+                    style="background: linear-gradient(135deg, #f59e0b, #d97706); height: 100px; font-size: 2.5rem; font-weight: 900; border: none; border-radius: 12px; color: white; cursor: pointer; transition: transform 0.1s;">C</button>
+                <button class="answer-btn" onclick="submitAnswer('D')"
+                    style="background: linear-gradient(135deg, #10b981, #059669); height: 100px; font-size: 2.5rem; font-weight: 900; border: none; border-radius: 12px; color: white; cursor: pointer; transition: transform 0.1s;">D</button>
+            </div>
+        </div>
+
+        <div id="waiting-area" style="text-align: center; padding: 40px;">
+            <h3 style="color: var(--text-secondary); font-size: 1.5rem;">Regardez le match</h3>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<style>
+    .answer-btn:active {
+        transform: scale(0.95);
+    }
+
+    .answer-btn:disabled {
+        opacity: 0.5;
+        transform: none;
+    }
+</style>
+<script>
+    const sessionId = "{{ session_id }}";
+    const playerName = "{{ player_name }}";
+    let hasAnswered = false;
+    let lastQ = "";
+
+    // Load avatar on page load
+    function loadAvatar() {
+        fetch(`/api/player/${sessionId}/${encodeURIComponent(playerName)}/avatar`)
+            .then(r => r.json())
+            .then(data => {
+                if (data.avatar_url) {
+                    document.getElementById('player-avatar').src = data.avatar_url;
+                }
+            })
+            .catch(err => console.error("Avatar load error:", err));
+    }
+
+    // Load avatar immediately
+    loadAvatar();
+
+    function rerollAvatar() {
+        fetch('/api/player/avatar/reroll', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                session_id: sessionId,
+                player_name: playerName
+            })
+        }).then(r => r.json()).then(data => {
+            if (data.success) {
+                // Reload avatar
+                loadAvatar();
+                // Show feedback
+                const btn = event.target;
+                const originalText = btn.innerText;
+                btn.innerText = "✅ Changé !";
+                setTimeout(() => { btn.innerText = "🎲 Changer Avatar"; }, 1500);
+            }
+        });
+    }
+
+    function submitAnswer(ans) {
+        if (hasAnswered) return;
+        hasAnswered = true;
+
+        // Visual feedback - disable all buttons
+        const btns = document.querySelectorAll('.answer-btn');
+        btns.forEach(b => {
+            b.disabled = true;
+            b.style.opacity = '0.5';
+        });
+
+        fetch(`/api/game/${sessionId}/answer`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                player_name: playerName,
+                answer: ans
+            })
+        }).then(r => r.json()).then(data => {
+            // Could show result feedback here
+        });
+    }
+
+    function pollState() {
+        fetch(`/api/game/${sessionId}/state`)
+            .then(r => r.json())
+            .then(data => {
+                const lobbyView = document.getElementById('lobby-view');
+                const gameView = document.getElementById('game-view');
+
+                if (data.status === "LOBBY") {
+                    lobbyView.style.display = 'block';
+                    gameView.style.display = 'none';
+                    document.getElementById('status-area').innerText = `En attente... (${data.players_count}/${data.max_players} joueurs)`;
+                } else if (data.status === "FINISHED") {
+                    document.body.innerHTML = `
+                        <div class="container" style="text-align: center; justify-content: center;">
+                            <h1 style="font-size: 3rem; margin-bottom: 30px;">🏆 FIN DE PARTIE</h1>
+                            <p style="font-size: 1.5rem; color: var(--text-secondary);">Regardez l'écran pour le podium !</p>
+                        </div>
+                     `;
+                } else {
+                    // PLAYING or FEEDBACK
+                    lobbyView.style.display = 'none';
+                    gameView.style.display = 'block';
+
+                    document.getElementById('current-turn-player').innerText = data.current_player;
+
+                    const myTurn = (data.current_player === playerName && data.status === "PLAYING");
+                    const myArea = document.getElementById('my-turn-area');
+                    const waitArea = document.getElementById('waiting-area');
+
+                    if (myTurn) {
+                        myArea.style.display = 'block';
+                        waitArea.style.display = 'none';
+
+                        // Reset answer state for new question
+                        if (data.current_question && data.current_question.question !== lastQ) {
+                            lastQ = data.current_question.question;
+                            hasAnswered = false;
+                            const btns = document.querySelectorAll('.answer-btn');
+                            btns.forEach(b => {
+                                b.disabled = false;
+                                b.style.opacity = '1';
+                            });
+                        }
+                    } else {
+                        myArea.style.display = 'none';
+                        waitArea.style.display = 'block';
+                        if (data.status === "FEEDBACK") {
+                            waitArea.innerHTML = "<h3 style='color: var(--accent-color); font-size: 1.5rem;'>Résultat en cours...</h3>";
+                        } else {
+                            waitArea.innerHTML = "<h3 style='color: var(--text-secondary); font-size: 1.5rem;'>Au tour de <strong style='color: var(--highlight-color);'>" + data.current_player + "</strong></h3>";
+                        }
+                    }
+                }
+            })
+            .catch(err => console.error("Poll error:", err));
+    }
+
+    setInterval(pollState, 1000);
+    pollState();
+</script>
+{% endblock %}

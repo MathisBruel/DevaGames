@@ -20,20 +20,4 @@ def create_app(config_class=Config):
     from app.routes import bp as main_bp
     app.register_blueprint(main_bp)
 
-    quiz = QuizEngine()
-
-    easy = quiz.generate_questions(count=10, difficulty="facile")
-    medium = quiz.generate_questions(count=10, difficulty="normal")
-    hard = quiz.generate_questions(count=10, difficulty="difficile")
-    mixed = quiz.generate_mixed_questions(easy_count=3, medium_count=4, hard_count=3)
-
-    for e in easy:
-        print(e)
-    for m in medium:
-        print(m)
-    for h in hard:
-        print(h)
-    for m in mixed:
-        print(m)
-
     return app

@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block title %}Rejoindre{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <div class="form-card animate__animated animate__zoomIn">
+        <h2 class="form-title">REJOINDRE LA PARTIE</h2>
+
+        <form method="POST">
+            <div class="form-group">
+                <label class="form-label">Votre Pseudo</label>
+                <input type="text" name="player_name" placeholder="Ex: SuperJoueur" required maxlength="12" autofocus>
+            </div>
+
+            <button type="submit" class="btn" style="width: 100%; padding: 12px; background: var(--success-color);">
+                ENTRER DANS L'ARENE
+            </button>
+        </form>
+
+        {% if error %}
+        <div style="margin-top: 20px; color: var(--danger-color); font-weight: bold;">
+            {{ error }}
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

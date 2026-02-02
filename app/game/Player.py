@@ -13,7 +13,7 @@ class Avatar:
         self.avatar_url = f"https://api.dicebear.com/7.x/pixel-art/svg?seed={self.player.name}"
     
     def regenerate_avatar(self):
-        self.avatar_url = f"https://api.dicebear.com/7.x/pixel-art/svg?seed={self.player.name} {random.randint(0, 1000000)}"
+        self.avatar_url = f"https://api.dicebear.com/7.x/pixel-art/svg?seed={self.player.name}_{random.randint(0, 1000000)}"
     
     def __str__(self) -> str:
         return f"Avatar: {self.avatar_url}"

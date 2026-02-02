@@ -133,10 +133,36 @@ class HardQuestion(Quest):
 class QuizEngine:
     """Moteur de quiz pour gérer l'API de questions et générer des questions pour un jeu type 'Question pour un champion'."""
     
+    # Available categories from the French Quiz API
+    CATEGORIES = [
+        {"id": "art_litterature", "name": "Art & Littérature", "emoji": "📚"},
+        {"id": "cinema", "name": "Cinéma", "emoji": "🎬"},
+        {"id": "culture_generale", "name": "Culture Générale", "emoji": "🧠"},
+        {"id": "gastronomie", "name": "Gastronomie", "emoji": "🍽️"},
+        {"id": "geographie", "name": "Géographie", "emoji": "🌍"},
+        {"id": "histoire", "name": "Histoire", "emoji": "📜"},
+        {"id": "musique", "name": "Musique", "emoji": "🎵"},
+        {"id": "nature", "name": "Nature", "emoji": "🌿"},
+        {"id": "sciences", "name": "Sciences", "emoji": "🔬"},
+        {"id": "sport", "name": "Sport", "emoji": "⚽"},
+        {"id": "television", "name": "Télévision", "emoji": "📺"},
+        {"id": "jeux_videos", "name": "Jeux Vidéo", "emoji": "🎮"},
+    ]
+    
     def __init__(self):
         """Initialise le moteur de quiz avec l'URL de l'API et un client HTTP."""
         self.api_url = "https://quizzapi.jomoreschi.fr/api/v2/quiz"
         self.client = httpx.Client(timeout=10.0)
+        self.selected_categories = []  # Will be set via config
+
+    @classmethod
+    def get_available_categories(cls) -> List[Dict]:
+        """Returns the list of available categories."""
+        return cls.CATEGORIES
+
+    def set_categories(self, categories: List[str]):
+        """Set the categories to use for question generation."""
+        self.selected_categories = categories
 
     def fetch_questions(self, limit: int = 10, difficulty: Optional[str] = None, 
                        category: Optional[str] = None) -> Optional[List[Dict]]:
@@ -165,6 +191,39 @@ class QuizEngine:
         except httpx.HTTPError as e:
             print(f"Erreur lors de la récupération des questions: {e}")
             return None
+
+    def fetch_questions_from_categories(self, limit: int = 10, difficulty: Optional[str] = None,
+                                        categories: Optional[List[str]] = None) -> List[Dict]:
+        """
+        Fetch questions from multiple categories.
+        
+        Args:
+            limit: Total number of questions to fetch.
+            difficulty: Difficulty level.
+            categories: List of category IDs to fetch from. If None, uses all.
+        
+        Returns:
+            List of question dictionaries.
+        """
+        if not categories:
+            categories = self.selected_categories if self.selected_categories else [c['id'] for c in self.CATEGORIES]
+        
+        if not categories:
+            # Fallback to fetching without category filter
+            return self.fetch_questions(limit, difficulty) or []
+        
+        all_questions = []
+        # Calculate questions per category
+        per_category = max(1, limit // len(categories))
+        
+        for cat in categories:
+            questions = self.fetch_questions(per_category, difficulty, cat)
+            if questions:
+                all_questions.extend(questions)
+        
+        # Shuffle and trim to limit
+        random.shuffle(all_questions)
+        return all_questions[:limit]
 
     def _create_question_object(self, api_question: Dict, difficulty: str) -> Quest:
         """
@@ -203,24 +262,33 @@ class QuizEngine:
         Returns:
             Objet Quest correspondant à la difficulté demandée, ou None en cas d'erreur.
         """
-        questions_data = self.fetch_questions(limit=1, difficulty=difficulty)
+        # Use categories if set
+        if self.selected_categories:
+            # Pick a random category from selected ones
+            category = random.choice(self.selected_categories)
+            questions_data = self.fetch_questions(limit=1, difficulty=difficulty, category=category)
+        else:
+            questions_data = self.fetch_questions(limit=1, difficulty=difficulty)
+            
         if not questions_data or len(questions_data) == 0:
             return None
         
         return self._create_question_object(questions_data[0], difficulty)
 
-    def generate_questions(self, count: int = 10, difficulty: Optional[str] = None) -> List[Quest]:
+    def generate_questions(self, count: int = 10, difficulty: Optional[str] = None,
+                           categories: Optional[List[str]] = None) -> List[Quest]:
         """
         Génère plusieurs questions d'un même niveau de difficulté.
         
         Args:
             count: Nombre de questions à générer (par défaut: 10).
             difficulty: Niveau de difficulté ("facile", "normal", "difficile") ou None pour un mélange.
+            categories: List of category IDs to use.
         
         Returns:
             Liste d'objets Quest. Liste vide en cas d'erreur.
         """
-        questions_data = self.fetch_questions(limit=count, difficulty=difficulty)
+        questions_data = self.fetch_questions_from_categories(count, difficulty, categories)
         if not questions_data:
             return []
         

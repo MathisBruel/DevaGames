@@ -41,6 +41,17 @@ class Game:
                 return True
         return False
 
+    def kick_player(self, player_name: str) -> bool:
+        """Remove a player from the game"""
+        for i, p in enumerate(self.players):
+            if p.name == player_name:
+                self.players.pop(i)
+                # Adjust current player index if needed
+                if self.current_player_index >= len(self.players) and len(self.players) > 0:
+                    self.current_player_index = 0
+                return True
+        return False
+
     def set_config(self, config: Dict):
         """Sets configuration before game start"""
         self.min_players = config.get('min_players', 2)

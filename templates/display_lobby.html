@@ -108,13 +108,33 @@
                 data.leaderboard.forEach(player => {
                     const li = document.createElement('li');
                     li.className = 'leaderboard-item animate__animated animate__fadeIn';
+                    li.style.justifyContent = 'space-between';
                     li.innerHTML = `
-                        <img src="${player.avatar_url}" class="avatar">
-                        <span class="player-name" style="font-size: 1.1rem;">${player.name}</span>
+                        <div style="display: flex; align-items: center; gap: 15px;">
+                            <img src="${player.avatar_url}" class="avatar">
+                            <span class="player-name" style="font-size: 1.1rem;">${player.name}</span>
+                        </div>
+                        <button onclick="kickPlayer('${player.name}')" class="btn btn-danger" style="padding: 5px 12px; font-size: 0.8rem;">
+                            ✕
+                        </button>
                     `;
                     list.appendChild(li);
                 });
             });
+    }
+
+    function kickPlayer(playerName) {
+        if (!confirm(`Expulser ${playerName} ?`)) return;
+
+        fetch(`/api/game/${sessionId}/kick`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ player_name: playerName })
+        }).then(r => r.json()).then(data => {
+            if (data.success) {
+                pollState(); // Refresh list
+            }
+        });
     }
 
     function startGame() {

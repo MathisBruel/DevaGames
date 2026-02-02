@@ -210,6 +210,20 @@ def api_reroll_avatar():
     success = game_session.reroll_avatar(player_name)
     return jsonify({"success": success})
 
+@bp.route('/api/game/<session_id>/kick', methods=['POST'])
+def api_kick_player(session_id):
+    """Kick a player from the game (admin only)"""
+    game_session = session_manager.get_session(session_id)
+    if not game_session:
+        return jsonify({"error": "No session"}), 404
+    
+    player_name = request.json.get('player_name')
+    if not player_name:
+        return jsonify({"error": "Player name required"}), 400
+        
+    success = game_session.game.kick_player(player_name)
+    return jsonify({"success": success})
+
 @bp.route('/api/player/<session_id>/<player_name>/avatar')
 def api_get_player_avatar(session_id, player_name):
     """Get a player's current avatar URL."""

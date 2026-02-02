@@ -79,10 +79,36 @@
     let isRevealing = false;
     let currentPlayerName = "";
 
+    // Background Music
+    const bgMusic = new Audio('/static/musiques/ambiance.wav');
+    bgMusic.loop = true;
+    bgMusic.volume = 0.3;
+
+    // Sound Effects
+    const correctSound = new Audio('/static/musiques/correct.mp3');
+    const wrongSound = new Audio('/static/musiques/wrong.mp3');
+    const podiumMusic = new Audio('/static/musiques/podium.mp3');
+    correctSound.volume = 0.5;
+    wrongSound.volume = 0.5;
+    podiumMusic.volume = 0.5;
+    podiumMusic.loop = true;
+
+    // Start music on first user interaction (required by browsers)
+    document.addEventListener('click', function startMusic() {
+        bgMusic.play().catch(e => console.log('Music autoplay blocked'));
+        document.removeEventListener('click', startMusic);
+    }, { once: true });
+
+    // Check if audio was enabled from lobby (user clicked start game)
+    if (sessionStorage.getItem('audioEnabled') === 'true') {
+        bgMusic.play().catch(e => console.log('Music autoplay blocked'));
+    }
+
     // Auto Advance Logic
     let autoTimerInterval = null;
     let autoTimeLeft = 3;
     let isPaused = false;
+    let lastFeedbackId = "";  // Track which feedback we played
 
     function startTimer(seconds) {
         clearInterval(timerInterval);
@@ -181,6 +207,10 @@
     function revealPodium(leaderboard) {
         if (isRevealing) return;
         isRevealing = true;
+
+        // Stop ambiance and play podium music
+        bgMusic.pause();
+        podiumMusic.play().catch(e => { });
 
         const winners = leaderboard.slice(0, 3);
 
@@ -311,6 +341,19 @@
                     if (!isInFeedback) {
                         isInFeedback = true;
                         updateOptions(data.current_question, true, data.current_question.answer);
+
+                        // Play correct/wrong sound based on last_result
+                        const feedbackId = data.current_round + "_" + data.current_player;
+                        if (data.last_result && lastFeedbackId !== feedbackId) {
+                            lastFeedbackId = feedbackId;
+                            if (data.last_result.correct) {
+                                correctSound.currentTime = 0;
+                                correctSound.play().catch(e => { });
+                            } else {
+                                wrongSound.currentTime = 0;
+                                wrongSound.play().catch(e => { });
+                            }
+                        }
 
                         // Show control bar
                         document.getElementById('control-bar').style.display = 'block';

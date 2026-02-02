@@ -134,7 +134,7 @@
                 answer: ans
             })
         }).then(r => r.json()).then(data => {
-            // Could show result feedback here
+            // No sound on mobile - audio only on projector
         });
     }
 
@@ -150,10 +150,41 @@
                     gameView.style.display = 'none';
                     document.getElementById('status-area').innerText = `En attente... (${data.players_count}/${data.max_players} joueurs)`;
                 } else if (data.status === "FINISHED") {
+                    // Find player's rank and score in leaderboard
+                    let playerRank = 0;
+                    let playerScore = 0;
+                    if (data.leaderboard) {
+                        for (let i = 0; i < data.leaderboard.length; i++) {
+                            if (data.leaderboard[i].name === playerName) {
+                                playerRank = i + 1;
+                                playerScore = data.leaderboard[i].score;
+                                break;
+                            }
+                        }
+                    }
+
+                    // Determine rank emoji
+                    let rankEmoji = "🎮";
+                    if (playerRank === 1) rankEmoji = "🥇";
+                    else if (playerRank === 2) rankEmoji = "🥈";
+                    else if (playerRank === 3) rankEmoji = "🥉";
+
                     document.body.innerHTML = `
-                        <div class="container" style="text-align: center; justify-content: center;">
-                            <h1 style="font-size: 3rem; margin-bottom: 30px;">🏆 FIN DE PARTIE</h1>
-                            <p style="font-size: 1.5rem; color: var(--text-secondary);">Regardez l'écran pour le podium !</p>
+                        <div class="container" style="text-align: center; justify-content: center; gap: 20px;">
+                            <h1 style="font-size: 3rem; margin-bottom: 10px;">🏆 FIN DE PARTIE</h1>
+                            
+                            <div style="background: rgba(255,255,255,0.1); padding: 30px; border-radius: 20px; margin: 20px 0;">
+                                <div style="font-size: 4rem; margin-bottom: 10px;">${rankEmoji}</div>
+                                <div style="font-size: 1.5rem; color: var(--text-secondary); margin-bottom: 5px;">Votre classement</div>
+                                <div style="font-size: 3rem; font-weight: 900; color: var(--accent-color);">#${playerRank}</div>
+                            </div>
+                            
+                            <div style="background: rgba(245, 158, 11, 0.2); padding: 25px; border-radius: 15px;">
+                                <div style="font-size: 1.2rem; color: var(--text-secondary); margin-bottom: 5px;">Score Final</div>
+                                <div style="font-size: 2.5rem; font-weight: 900; color: var(--highlight-color);">${playerScore} pts</div>
+                            </div>
+                            
+                            <p style="font-size: 1rem; color: var(--text-secondary); margin-top: 20px;">Regardez l'écran pour le podium !</p>
                         </div>
                      `;
                 } else {

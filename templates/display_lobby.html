@@ -56,6 +56,20 @@
 <script>
     const sessionId = "{{ session_id }}";
 
+    // Waiting Music (loops in lobby)
+    const waitingMusic = new Audio('/static/musiques/waiting.mp3');
+    waitingMusic.loop = true;
+    waitingMusic.volume = 0.4;
+
+    // Start music on first user interaction
+    document.addEventListener('click', function startMusic() {
+        waitingMusic.play().catch(e => console.log('Music blocked'));
+        document.removeEventListener('click', startMusic);
+    }, { once: true });
+
+    // Try autoplay
+    waitingMusic.play().catch(e => console.log('Waiting for interaction to start music'));
+
     function pollState() {
         fetch(`/api/game/${sessionId}/state`)
             .then(r => r.json())
@@ -106,6 +120,10 @@
     function startGame() {
         const btn = document.getElementById('start-btn');
         btn.innerText = "LANCEMENT...";
+
+        // Stop waiting music and set flag for game music autoplay
+        waitingMusic.pause();
+        sessionStorage.setItem('audioEnabled', 'true');
 
         fetch(`/api/game/${sessionId}/start`, {
             method: 'POST',
